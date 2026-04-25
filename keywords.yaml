@@ -1,0 +1,448 @@
+# BEV Search Monitor — Master Keyword List
+#
+# Derived from the brief's competitor table (status 2026).
+# Review carefully before running fetcher.py — every keyword costs API quota
+# and shapes the "Share of BEV Brand Interest" denominator.
+#
+# Conventions:
+#   - For PURE BEV brands, the standalone brand name is included (all intent
+#     is BEV-relevant by definition).
+#   - For MIXED brands, ONLY model-specific keywords (standalone brand would
+#     conflate ICE intent into the BEV share).
+#   - For "smart": pure BEV since the Geely JV, BUT the standalone keyword
+#     "smart" is intentionally excluded — too noisy (smart watch, smart home,
+#     smart phone, smart TV...). Models only.
+#   - Spelling variants (e.g. "VW ID.3" vs "Volkswagen ID.3") are both listed
+#     so we capture all common search forms; Google Ads aggregates them per
+#     keyword so this is additive, not double-counting.
+#   - Brands with no in-market BEV (Bentley, Lamborghini, Land Rover BEV not
+#     yet shipping, Seat) are skipped — re-add when models launch.
+
+focal_brand: smart
+
+brands:
+
+  smart:
+    pure_bev: true
+    keywords:
+      - "smart #1"
+      - "smart #3"
+      - "smart #5"
+      - "smart hashtag 1"
+      - "smart hashtag 3"
+      - "smart hashtag 5"
+
+  abarth:
+    pure_bev: false
+    keywords:
+      - "Abarth 500e"
+      - "Abarth 600e"
+
+  aiways:
+    pure_bev: true
+    keywords:
+      - "Aiways"
+      - "Aiways U5"
+      - "Aiways U6"
+
+  alfa_romeo:
+    pure_bev: false
+    keywords:
+      - "Alfa Romeo Junior Elettrica"
+      - "Alfa Junior Elettrica"
+
+  alpine:
+    pure_bev: false
+    keywords:
+      - "Alpine A290"
+      - "Alpine A390"
+
+  audi:
+    pure_bev: false
+    keywords:
+      - "Audi Q4 e-tron"
+      - "Audi Q6 e-tron"
+      - "Audi Q8 e-tron"
+      - "Audi e-tron GT"
+      - "Audi A6 e-tron"
+
+  avatr:
+    pure_bev: true
+    keywords:
+      - "Avatr"
+      - "Avatr 11"
+      - "Avatr 12"
+
+  bmw:
+    pure_bev: false
+    keywords:
+      - "BMW i4"
+      - "BMW i5"
+      - "BMW i7"
+      - "BMW iX"
+      - "BMW iX1"
+      - "BMW iX2"
+      - "BMW iX3"
+
+  byd:
+    pure_bev: true
+    keywords:
+      - "BYD"
+      - "BYD Atto 3"
+      - "BYD Dolphin"
+      - "BYD Seal"
+      - "BYD Seal U"
+      - "BYD Sealion 7"
+      - "BYD Han"
+      - "BYD Tang"
+
+  cadillac:
+    pure_bev: false
+    keywords:
+      - "Cadillac Lyriq"
+      - "Cadillac Optiq"
+
+  citroen:
+    pure_bev: false
+    keywords:
+      - "Citroen e-C3"
+      - "Citroen e-C4"
+      - "Citroen e-C4 X"
+      - "Citroen e-Berlingo"
+
+  cupra:
+    pure_bev: false
+    keywords:
+      - "Cupra Born"
+      - "Cupra Tavascan"
+      - "Cupra Raval"
+
+  dacia:
+    pure_bev: false
+    keywords:
+      - "Dacia Spring"
+
+  ds_automobiles:
+    pure_bev: false
+    keywords:
+      - "DS 3 E-Tense"
+      - "DS 4 E-Tense"
+      - "DS N°4"
+      - "DS N°8"
+
+  ferrari:
+    pure_bev: false
+    keywords:
+      - "Ferrari Elettrica"
+
+  fiat:
+    pure_bev: false
+    keywords:
+      - "Fiat 500e"
+      - "Fiat 600e"
+      - "Fiat Topolino"
+      - "Fiat Grande Panda elettrica"
+
+  ford:
+    pure_bev: false
+    keywords:
+      - "Ford Mustang Mach-E"
+      - "Ford Explorer EV"
+      - "Ford Capri EV"
+      - "Ford E-Transit"
+
+  genesis:
+    pure_bev: false
+    keywords:
+      - "Genesis GV60"
+      - "Genesis GV70 Electrified"
+      - "Genesis G80 Electrified"
+
+  ora:
+    pure_bev: true
+    keywords:
+      - "Ora 03"
+      - "Ora Funky Cat"
+      - "Ora 07"
+      - "GWM Ora"
+
+  honda:
+    pure_bev: false
+    keywords:
+      - "Honda e:Ny1"
+      - "Honda 0"
+
+  hongqi:
+    pure_bev: true
+    keywords:
+      - "Hongqi"
+      - "Hongqi E-HS9"
+      - "Hongqi EH7"
+      - "Hongqi EHS7"
+
+  hyundai:
+    pure_bev: false
+    keywords:
+      - "Hyundai Ioniq 5"
+      - "Hyundai Ioniq 6"
+      - "Hyundai Ioniq 9"
+      - "Hyundai Kona Electric"
+      - "Hyundai Inster"
+
+  jaguar:
+    pure_bev: false
+    keywords:
+      - "Jaguar I-Pace"
+      - "Jaguar GT"
+
+  jaecoo:
+    pure_bev: false
+    keywords:
+      - "Jaecoo 6 EV"
+
+  jeep:
+    pure_bev: false
+    keywords:
+      - "Jeep Avenger Electric"
+      - "Jeep Wagoneer S"
+      - "Jeep Recon"
+
+  kia:
+    pure_bev: false
+    keywords:
+      - "Kia EV3"
+      - "Kia EV4"
+      - "Kia EV5"
+      - "Kia EV6"
+      - "Kia EV9"
+      - "Kia Niro EV"
+
+  lancia:
+    pure_bev: false
+    keywords:
+      - "Lancia Ypsilon elettrica"
+
+  leapmotor:
+    pure_bev: true
+    keywords:
+      - "Leapmotor"
+      - "Leapmotor T03"
+      - "Leapmotor C10"
+
+  lexus:
+    pure_bev: false
+    keywords:
+      - "Lexus RZ"
+      - "Lexus UX 300e"
+
+  lotus:
+    pure_bev: false
+    keywords:
+      - "Lotus Eletre"
+      - "Lotus Emeya"
+
+  lucid:
+    pure_bev: true
+    keywords:
+      - "Lucid Air"
+      - "Lucid Gravity"
+      - "Lucid Motors"
+
+  maserati:
+    pure_bev: false
+    keywords:
+      - "Maserati GranTurismo Folgore"
+      - "Maserati Grecale Folgore"
+      - "Maserati GranCabrio Folgore"
+
+  mazda:
+    pure_bev: false
+    keywords:
+      - "Mazda MX-30"
+      - "Mazda 6e"
+
+  mercedes_benz:
+    pure_bev: false
+    keywords:
+      - "Mercedes EQA"
+      - "Mercedes EQB"
+      - "Mercedes EQE"
+      - "Mercedes EQS"
+      - "Mercedes EQE SUV"
+      - "Mercedes EQS SUV"
+      - "Mercedes EQV"
+      - "Mercedes G-Class Electric"
+      - "Mercedes CLA Electric"
+
+  mg:
+    pure_bev: false
+    keywords:
+      - "MG4"
+      - "MG5 EV"
+      - "MG ZS EV"
+      - "MG S5"
+      - "MG Cyberster"
+
+  mini:
+    pure_bev: false
+    keywords:
+      - "MINI Cooper Electric"
+      - "MINI Aceman"
+      - "MINI Countryman Electric"
+
+  nio:
+    pure_bev: true
+    keywords:
+      - "NIO"
+      - "NIO ET5"
+      - "NIO ET7"
+      - "NIO EL6"
+      - "NIO EL7"
+      - "NIO EL8"
+      - "NIO ET9"
+
+  nissan:
+    pure_bev: false
+    keywords:
+      - "Nissan Ariya"
+      - "Nissan Leaf"
+      - "Nissan Townstar EV"
+
+  omoda:
+    pure_bev: false
+    keywords:
+      - "Omoda E5"
+
+  opel:
+    pure_bev: false
+    keywords:
+      - "Opel Corsa Electric"
+      - "Opel Mokka Electric"
+      - "Opel Astra Electric"
+      - "Opel Frontera Electric"
+      - "Opel Grandland Electric"
+
+  peugeot:
+    pure_bev: false
+    keywords:
+      - "Peugeot e-208"
+      - "Peugeot e-308"
+      - "Peugeot e-2008"
+      - "Peugeot e-3008"
+      - "Peugeot e-5008"
+      - "Peugeot e-Rifter"
+
+  polestar:
+    pure_bev: true
+    keywords:
+      - "Polestar"
+      - "Polestar 2"
+      - "Polestar 3"
+      - "Polestar 4"
+      - "Polestar 5"
+
+  porsche:
+    pure_bev: false
+    keywords:
+      - "Porsche Taycan"
+      - "Porsche Macan Electric"
+
+  renault:
+    pure_bev: false
+    keywords:
+      - "Renault 5 E-Tech"
+      - "Renault 4 E-Tech"
+      - "Renault Megane E-Tech"
+      - "Renault Scenic E-Tech"
+      - "Renault Zoe"
+
+  rimac:
+    pure_bev: true
+    keywords:
+      - "Rimac"
+      - "Rimac Nevera"
+
+  rolls_royce:
+    pure_bev: false
+    keywords:
+      - "Rolls-Royce Spectre"
+
+  skoda:
+    pure_bev: false
+    keywords:
+      - "Skoda Enyaq"
+      - "Skoda Elroq"
+      - "Skoda Epiq"
+
+  subaru:
+    pure_bev: false
+    keywords:
+      - "Subaru Solterra"
+
+  suzuki:
+    pure_bev: false
+    keywords:
+      - "Suzuki e Vitara"
+
+  tesla:
+    pure_bev: true
+    keywords:
+      - "Tesla"
+      - "Tesla Model 3"
+      - "Tesla Model Y"
+      - "Tesla Model S"
+      - "Tesla Model X"
+      - "Tesla Cybertruck"
+
+  toyota:
+    pure_bev: false
+    keywords:
+      - "Toyota bZ4X"
+      - "Toyota Urban Cruiser"
+
+  volkswagen:
+    pure_bev: false
+    keywords:
+      - "VW ID.3"
+      - "VW ID.4"
+      - "VW ID.5"
+      - "VW ID.7"
+      - "VW ID. Buzz"
+      - "VW ID.2"
+      - "Volkswagen ID.3"
+      - "Volkswagen ID.4"
+      - "Volkswagen ID.7"
+      - "Volkswagen ID. Buzz"
+
+  volvo:
+    pure_bev: false
+    keywords:
+      - "Volvo EX30"
+      - "Volvo EX40"
+      - "Volvo EC40"
+      - "Volvo EX90"
+      - "Volvo ES90"
+
+  xiaomi:
+    pure_bev: true
+    keywords:
+      - "Xiaomi SU7"
+      - "Xiaomi YU7"
+
+  xpeng:
+    pure_bev: true
+    keywords:
+      - "XPENG"
+      - "XPENG G6"
+      - "XPENG G9"
+      - "XPENG P7"
+      - "XPENG X9"
+
+  zeekr:
+    pure_bev: true
+    keywords:
+      - "Zeekr"
+      - "Zeekr 001"
+      - "Zeekr X"
+      - "Zeekr 7X"
+      - "Zeekr Mix"
