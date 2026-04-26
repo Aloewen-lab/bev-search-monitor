@@ -16,15 +16,68 @@ Output: data/search_volumes.parquet
 from __future__ import annotations
 
 import argparse
+import re
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable, TypeVar
 
 import pandas as pd
 import yaml
 
 import config
+
+T = TypeVar("T")
+
+
+def _retry_on_rate_limit(call: Callable[[], T], max_attempts: int = 6,
+                         base_delay: float = 8.0) -> T:
+    """Retry a Google Ads API call on RESOURCE_EXHAUSTED with exponential backoff.
+
+    Basic Access tier rate-limits GenerateKeywordHistoricalMetrics to roughly
+    one call every few seconds; bursts trip 429s. We sleep 8, 16, 32, 64, 128s.
+    """
+    from google.api_core.exceptions import ResourceExhausted
+
+    for attempt in range(max_attempts):
+        try:
+            return call()
+        except ResourceExhausted:
+            if attempt == max_attempts - 1:
+                raise
+            delay = base_delay * (2 ** attempt)
+            print(f"[fetcher]   ⚠ rate-limited, sleeping {delay:.0f}s "
+                  f"(attempt {attempt + 1}/{max_attempts})…")
+            time.sleep(delay)
+    raise RuntimeError("unreachable")
+
+
+MONTH_NAMES = [
+    "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
+    "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
+]
+MONTH_NAME_TO_INT = {name: i + 1 for i, name in enumerate(MONTH_NAMES)}
+
+
+def normalize_keyword(s: str) -> str:
+    """Match Google Ads' own normalization: lowercase, strip punctuation,
+    collapse whitespace. Without this, e.g. 'smart #1' (sent) vs 'smart 1'
+    (returned by Google) won't match."""
+    s = s.lower()
+    s = re.sub(r"[#!?.\-,'\":°]", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
+def _month_to_int(m) -> int:
+    """Google Ads' MonthOfYearEnum starts at UNSPECIFIED=0, UNKNOWN=1, JAN=2 …
+    Map back to calendar 1..12. Accepts the proto enum value or its .name."""
+    name = getattr(m, "name", None)
+    if name in MONTH_NAME_TO_INT:
+        return MONTH_NAME_TO_INT[name]
+    # fallback: enum int with the +1 offset
+    return int(m) - 1
 
 # google-ads imports are deferred so --dry-run works without credentials
 def _load_client():
@@ -108,6 +161,16 @@ def fetch_market(client, customer_id: str, market_code: str,
     # API caps at ~10k keywords/request; we batch to be safe.
     keyword_strings = [k.keyword for k in keywords]
     keyword_to_brand_pure = {k.keyword: (k.brand, k.pure_bev) for k in keywords}
+    normalized_lookup = {
+        normalize_keyword(k.keyword): (k.brand, k.pure_bev) for k in keywords
+    }
+
+    # Date range: from config.START_YEAR-01 to last fully completed month
+    # (current month is partial). Google Ads keeps ~48 months of history.
+    today = pd.Timestamp.today()
+    end_year, end_month = (today.year, today.month - 1) if today.month > 1 else (today.year - 1, 12)
+    month_enum = client.enums.MonthOfYearEnum
+    end_month_enum = getattr(month_enum, MONTH_NAMES[end_month - 1])
 
     for batch in _chunked(keyword_strings, 5000):
         request = client.get_type("GenerateKeywordHistoricalMetricsRequest")
@@ -118,8 +181,16 @@ def fetch_market(client, customer_id: str, market_code: str,
         request.include_adult_keywords = False
         request.keyword_plan_network = client.enums.KeywordPlanNetworkEnum.GOOGLE_SEARCH
 
-        response = keyword_plan_idea_service.generate_keyword_historical_metrics(
-            request=request
+        # Extend history to START_YEAR (default endpoint returns only last 12mo)
+        request.historical_metrics_options.year_month_range.start.year = config.START_YEAR
+        request.historical_metrics_options.year_month_range.start.month = month_enum.JANUARY
+        request.historical_metrics_options.year_month_range.end.year = end_year
+        request.historical_metrics_options.year_month_range.end.month = end_month_enum
+
+        response = _retry_on_rate_limit(
+            lambda: keyword_plan_idea_service.generate_keyword_historical_metrics(
+                request=request
+            )
         )
 
         for result in response.results:
@@ -127,12 +198,9 @@ def fetch_market(client, customer_id: str, market_code: str,
             metrics = result.keyword_metrics
             brand, pure_bev = keyword_to_brand_pure.get(text, (None, None))
             if brand is None:
-                # Google sometimes normalizes — try case-insensitive match
-                norm = text.lower()
-                for k, v in keyword_to_brand_pure.items():
-                    if k.lower() == norm:
-                        brand, pure_bev = v
-                        break
+                brand, pure_bev = normalized_lookup.get(
+                    normalize_keyword(text), (None, None)
+                )
             for monthly in metrics.monthly_search_volumes:
                 rows.append({
                     "country_code": market_code,
@@ -140,7 +208,7 @@ def fetch_market(client, customer_id: str, market_code: str,
                     "keyword":      text,
                     "pure_bev":     pure_bev,
                     "year":         int(monthly.year),
-                    "month":        int(monthly.month),  # 1=JAN .. 12=DEC (enum)
+                    "month":        _month_to_int(monthly.month),  # 1..12
                     "search_volume": int(monthly.monthly_searches or 0),
                     "competition":  metrics.competition.name if metrics.competition else None,
                     "low_top_of_page_bid_micros":  int(metrics.low_top_of_page_bid_micros or 0),
@@ -149,14 +217,6 @@ def fetch_market(client, customer_id: str, market_code: str,
 
     df = pd.DataFrame(rows)
     if not df.empty:
-        # Google Ads returns enum month names — coerce if needed
-        if df["month"].dtype == object:
-            month_map = {
-                "JANUARY": 1, "FEBRUARY": 2, "MARCH": 3, "APRIL": 4,
-                "MAY": 5, "JUNE": 6, "JULY": 7, "AUGUST": 8,
-                "SEPTEMBER": 9, "OCTOBER": 10, "NOVEMBER": 11, "DECEMBER": 12,
-            }
-            df["month"] = df["month"].map(month_map).astype(int)
         df = df[df["year"] >= config.START_YEAR].reset_index(drop=True)
     return df
 
@@ -188,7 +248,9 @@ def run(markets: list[str] | None = None, dry_run: bool = False) -> None:
     customer_id = _read_credentials()["customer_id"]
 
     all_frames: list[pd.DataFrame] = []
-    for mkt in markets:
+    for i, mkt in enumerate(markets):
+        if i > 0:
+            time.sleep(5)  # proactive spacing to stay under Basic-tier rate limit
         print(f"[fetcher] {mkt} — fetching {len(keywords)} keywords…")
         df = fetch_market(client, customer_id, mkt, keywords)
         print(f"[fetcher] {mkt} — got {len(df)} monthly rows")

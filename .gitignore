@@ -4,8 +4,8 @@ google_ads.yaml
 *.json
 !package.json
 
-# Data
-data/*.parquet
+# Data — parquet is committed (small, needed for cloud deploy);
+# CSV exports are local-only
 data/*.csv
 
 # Python
