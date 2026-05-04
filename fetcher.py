@@ -145,28 +145,19 @@ def _chunked(seq: list, n: int) -> Iterable[list]:
         yield seq[i:i + n]
 
 
-def fetch_market(client, customer_id: str, market_code: str,
-                 keywords: list[KeywordEntry]) -> pd.DataFrame:
-    """Fetch historical metrics for one market across all keywords."""
-    market = config.MARKETS[market_code]
+def _fetch_market_one_language(client, customer_id, market_code,
+                               geo_resource, language_resource,
+                               keywords) -> list[dict]:
+    """Run one historical-metrics query for a single (market, language) pair."""
     keyword_plan_idea_service = client.get_service("KeywordPlanIdeaService")
-    googleads_service = client.get_service("GoogleAdsService")
-
-    geo_resource = googleads_service.geo_target_constant_path(market["geo_id"])
-    # historical metrics endpoint takes ONE language; pick the primary
-    language_resource = googleads_service.language_constant_path(market["language_ids"][0])
 
     rows: list[dict] = []
-
-    # API caps at ~10k keywords/request; we batch to be safe.
     keyword_strings = [k.keyword for k in keywords]
     keyword_to_brand_pure = {k.keyword: (k.brand, k.pure_bev) for k in keywords}
     normalized_lookup = {
         normalize_keyword(k.keyword): (k.brand, k.pure_bev) for k in keywords
     }
 
-    # Date range: from config.START_YEAR-01 to last fully completed month
-    # (current month is partial). Google Ads keeps ~48 months of history.
     today = pd.Timestamp.today()
     end_year, end_month = (today.year, today.month - 1) if today.month > 1 else (today.year - 1, 12)
     month_enum = client.enums.MonthOfYearEnum
@@ -180,8 +171,6 @@ def fetch_market(client, customer_id: str, market_code: str,
         request.language = language_resource
         request.include_adult_keywords = False
         request.keyword_plan_network = client.enums.KeywordPlanNetworkEnum.GOOGLE_SEARCH
-
-        # Extend history to START_YEAR (default endpoint returns only last 12mo)
         request.historical_metrics_options.year_month_range.start.year = config.START_YEAR
         request.historical_metrics_options.year_month_range.start.month = month_enum.JANUARY
         request.historical_metrics_options.year_month_range.end.year = end_year
@@ -208,16 +197,57 @@ def fetch_market(client, customer_id: str, market_code: str,
                     "keyword":      text,
                     "pure_bev":     pure_bev,
                     "year":         int(monthly.year),
-                    "month":        _month_to_int(monthly.month),  # 1..12
+                    "month":        _month_to_int(monthly.month),
                     "search_volume": int(monthly.monthly_searches or 0),
                     "competition":  metrics.competition.name if metrics.competition else None,
                     "low_top_of_page_bid_micros":  int(metrics.low_top_of_page_bid_micros or 0),
                     "high_top_of_page_bid_micros": int(metrics.high_top_of_page_bid_micros or 0),
                 })
+    return rows
 
-    df = pd.DataFrame(rows)
-    if not df.empty:
-        df = df[df["year"] >= config.START_YEAR].reset_index(drop=True)
+
+def fetch_market(client, customer_id: str, market_code: str,
+                 keywords: list[KeywordEntry]) -> pd.DataFrame:
+    """Fetch historical metrics for one market — across ALL its official
+    languages — and sum search volumes per (keyword, year, month).
+
+    Multilingual markets (CH: de/fr/it, BE: nl/fr) are queried once per
+    language; volumes are summed because Google Ads attributes searches to a
+    single user-language, so the per-language results are disjoint."""
+    market = config.MARKETS[market_code]
+    googleads_service = client.get_service("GoogleAdsService")
+    geo_resource = googleads_service.geo_target_constant_path(market["geo_id"])
+
+    all_rows: list[dict] = []
+    for i, language_id in enumerate(market["language_ids"]):
+        if i > 0:
+            time.sleep(3)  # extra spacing between language calls
+        language_resource = googleads_service.language_constant_path(language_id)
+        print(f"[fetcher]   {market_code} · lang={language_id}…")
+        rows = _fetch_market_one_language(
+            client, customer_id, market_code,
+            geo_resource, language_resource, keywords,
+        )
+        all_rows.extend(rows)
+
+    df = pd.DataFrame(all_rows)
+    if df.empty:
+        return df
+    # Sum volumes across languages; keep first-seen competition label,
+    # take max bid micros (different language pools can have different floors)
+    df = (
+        df.groupby(
+            ["country_code", "brand", "keyword", "pure_bev", "year", "month"],
+            dropna=False, as_index=False,
+        )
+        .agg({
+            "search_volume": "sum",
+            "competition": "first",
+            "low_top_of_page_bid_micros": "max",
+            "high_top_of_page_bid_micros": "max",
+        })
+    )
+    df = df[df["year"] >= config.START_YEAR].reset_index(drop=True)
     return df
 
 
