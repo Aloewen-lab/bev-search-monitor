@@ -208,46 +208,29 @@ def _fetch_market_one_language(client, customer_id, market_code,
 
 def fetch_market(client, customer_id: str, market_code: str,
                  keywords: list[KeywordEntry]) -> pd.DataFrame:
-    """Fetch historical metrics for one market — across ALL its official
-    languages — and sum search volumes per (keyword, year, month).
+    """Fetch historical metrics for one market.
 
-    Multilingual markets (CH: de/fr/it, BE: nl/fr) are queried once per
-    language; volumes are summed because Google Ads attributes searches to a
-    single user-language, so the per-language results are disjoint."""
+    NOTE on language: We query with the primary language only (language_ids[0]).
+    Empirical test (scripts/diagnose_language.py, 2026-04) showed that Google
+    Ads ignores the `language` filter for brand/model keywords — querying
+    'Tesla Model Y' in CH with DE / FR / IT all return identical volumes.
+    Looping over all official languages and summing therefore inflated CH (3×)
+    and BE (2×). The single-language query already returns total geo-level
+    volumes for language-agnostic terms, which is what we want."""
     market = config.MARKETS[market_code]
     googleads_service = client.get_service("GoogleAdsService")
     geo_resource = googleads_service.geo_target_constant_path(market["geo_id"])
-
-    all_rows: list[dict] = []
-    for i, language_id in enumerate(market["language_ids"]):
-        if i > 0:
-            time.sleep(3)  # extra spacing between language calls
-        language_resource = googleads_service.language_constant_path(language_id)
-        print(f"[fetcher]   {market_code} · lang={language_id}…")
-        rows = _fetch_market_one_language(
-            client, customer_id, market_code,
-            geo_resource, language_resource, keywords,
-        )
-        all_rows.extend(rows)
-
-    df = pd.DataFrame(all_rows)
-    if df.empty:
-        return df
-    # Sum volumes across languages; keep first-seen competition label,
-    # take max bid micros (different language pools can have different floors)
-    df = (
-        df.groupby(
-            ["country_code", "brand", "keyword", "pure_bev", "year", "month"],
-            dropna=False, as_index=False,
-        )
-        .agg({
-            "search_volume": "sum",
-            "competition": "first",
-            "low_top_of_page_bid_micros": "max",
-            "high_top_of_page_bid_micros": "max",
-        })
+    language_resource = googleads_service.language_constant_path(
+        market["language_ids"][0]
     )
-    df = df[df["year"] >= config.START_YEAR].reset_index(drop=True)
+
+    rows = _fetch_market_one_language(
+        client, customer_id, market_code,
+        geo_resource, language_resource, keywords,
+    )
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        df = df[df["year"] >= config.START_YEAR].reset_index(drop=True)
     return df
 
 
