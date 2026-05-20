@@ -289,7 +289,7 @@ with tab1:
                     title="Monthly Search Volume — Per Market",
                 )
                 strip_facet_prefix(fig)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         st.subheader("Brand × Year — total searches")
         yearly = (
@@ -298,11 +298,14 @@ with tab1:
             .pivot(index="brand", columns="year", values="search_volume")
             .fillna(0).astype(int)
         )
+        # Cast year columns to strings so Arrow doesn't warn on mixed dtypes
+        # (integer years + "Total" string would otherwise mix)
+        yearly.columns = [str(c) for c in yearly.columns]
         yearly["Total"] = yearly.sum(axis=1)
         yearly = yearly.sort_values("Total", ascending=False)
         st.dataframe(
             yearly.style.format(fmt_int_de),
-            use_container_width=True,
+            width="stretch",
         )
 
 
@@ -342,7 +345,7 @@ with tab2:
                         "keyword": "Keyword (selectable)"},
                 title=f"Monthly Search Volume — {sel_brand_for_models} (per keyword)",
             )
-            graph_slot.plotly_chart(fig, use_container_width=True)
+            graph_slot.plotly_chart(fig, width="stretch")
 
             by_kw = (
                 bdf_filtered.groupby("display_keyword")["search_volume"].sum()
@@ -351,7 +354,7 @@ with tab2:
             )
             table_slot.dataframe(
                 by_kw.style.format({"search_volume": fmt_int_de}),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
         else:
@@ -397,7 +400,7 @@ with tab3:
                       f"— Monthly, by Market",
             )
             fig.update_layout(hovermode="x unified")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
             latest_date = by_market["date"].max()
             latest = (
@@ -420,7 +423,7 @@ with tab3:
                     "Total": fmt_int_de,
                     "Share": fmt_pct,
                 }),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
 
@@ -432,7 +435,7 @@ with tab4:
         f"{fmt_int_de(len(dff))} rows. Numbers shown unformatted — use the CSV "
         "download for analysis. Sortable by clicking column headers."
     )
-    st.dataframe(dff, use_container_width=True, hide_index=True)
+    st.dataframe(dff, width="stretch", hide_index=True)
     csv = dff.to_csv(index=False).encode("utf-8")
     st.download_button(
         "Download CSV",
