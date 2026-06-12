@@ -22,7 +22,6 @@ import config
 
 st.set_page_config(
     page_title="BEV Search Monitor",
-    page_icon="🔍",
     layout="wide",
 )
 
@@ -86,7 +85,9 @@ DATA_FILE = config.DATA_DIR / "search_volumes.parquet"
 
 
 @st.cache_data(ttl=3600, show_spinner="Loading search volumes…")
-def load_data() -> pd.DataFrame:
+def load_data(file_mtime: float) -> pd.DataFrame:
+    """Load parquet. Cache key includes file_mtime so any data refresh
+    automatically busts the cache — no manual 'Clear cache' needed."""
     if not DATA_FILE.exists():
         return pd.DataFrame()
     df = pd.read_parquet(DATA_FILE)
@@ -99,7 +100,8 @@ def load_data() -> pd.DataFrame:
     return df
 
 
-df = load_data()
+mtime = DATA_FILE.stat().st_mtime if DATA_FILE.exists() else 0.0
+df = load_data(mtime)
 
 if df.empty:
     st.warning(
@@ -114,7 +116,7 @@ MARKET_NAMES = {k: v["name"] for k, v in config.MARKETS.items()}
 # Sidebar filters
 # ---------------------------------------------------------------------------
 
-st.sidebar.title("🔍 BEV Search Monitor")
+st.sidebar.title("BEV Search Monitor")
 st.sidebar.caption("European search volumes for BEV brands & models")
 
 available_markets = sorted(df["country_code"].unique())
@@ -169,11 +171,11 @@ def _empty_filter_guard():
 # ---------------------------------------------------------------------------
 
 tab_info, tab1, tab2, tab3, tab4 = st.tabs([
-    "ℹ️ Info",
-    "📈 Brand Trend",
-    "🚗 Model Trend",
-    f"⚡ Share of {config.FOCAL_BRAND} Brand Interest",
-    "📥 Raw Data",
+    "Info",
+    "Brand Trend",
+    "Model Trend",
+    f"Share of {config.FOCAL_BRAND} Brand Interest",
+    "Raw Data",
 ])
 
 
@@ -232,6 +234,68 @@ competitive set.
    - Click legend = toggle a line on/off
    - Double-click legend = isolate that line
    - Range slider below the chart = zoom
+
+### System architecture
+
+```
+   [Google Ads API]                         (data source)
+   KeywordPlanIdeaService
+            │
+            │ OAuth 2.0 + Developer Token
+            ▼
+   [fetcher.py]                             (Python ingestion)
+   - Reads keywords.yaml (200 kws, 56 brands)
+   - Queries 11 markets sequentially
+   - Normalises keywords, handles rate limits
+            │
+            │ writes
+            ▼
+   [data/search_volumes.parquet]            (storage, columnar binary)
+            │
+            │ committed to
+            ▼
+   [GitHub: Aloewen-lab/bev-search-monitor] (version control)
+            │
+            │ auto-deploy on push to main
+            ▼
+   [Streamlit Cloud]                        (hosting + container runtime)
+   - Builds Python env from requirements.txt
+   - Reads secrets.toml from Cloud Secrets store
+            │
+            │ runs
+            ▼
+   [dashboard.py]                           (visualization layer)
+   - Password gate
+   - Plotly charts + pandas tables
+   - Auto-busts data cache on parquet mtime change
+            │
+            ▼
+   [User browser]                           (bev-search-monitor.streamlit.app)
+```
+
+**Component summary**
+
+| Component | Role |
+|---|---|
+| Google Ads API | Authoritative source of monthly keyword search volumes |
+| `fetcher.py` + `keywords.yaml` | Local Python pipeline that pulls + cleans the data |
+| `data/search_volumes.parquet` | Compact columnar storage (~115 KB for ~86 k rows) |
+| GitHub repository | Version control + single source of truth for code and data |
+| Streamlit Cloud | Free managed hosting that auto-redeploys on every `git push` |
+| `dashboard.py` | Streamlit + Plotly app; password-gated, hot-reloads on data changes |
+| `.streamlit/secrets.toml` | OAuth credentials + app password (local, never committed) |
+| Cloud Secrets (Streamlit) | Same secrets, separately managed in the Streamlit Cloud UI |
+
+**Update flow**
+
+1. Locally: activate venv → `python update.py` → fresh parquet with the newest completed month
+2. `git add data/search_volumes.parquet` → `git commit` → `git push`
+3. Streamlit Cloud detects the push and rebuilds the app in 1–3 minutes
+4. The cache key includes the parquet file's modification time, so users see the new data on next refresh — no manual cache clearing needed
+
+**Why this stack**
+
+The whole stack is **portable and open** — no vendor lock-in. The repo can be cloned to any Linux/macOS/Windows machine, the parquet can be opened in any tool that reads it (Python, R, DuckDB, Excel via plugin), and the dashboard can be redeployed to any container host (Render, Fly.io, AWS App Runner, self-hosted Docker) without code changes.
 
 ### Caveats
 
