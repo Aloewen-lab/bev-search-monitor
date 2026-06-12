@@ -45,6 +45,12 @@ brands:
       - "Aiways U5"
       - "Aiways U6"
 
+  gac_aion:
+    pure_bev: true
+    keywords:
+      - "Aion UT"
+      - "GAC Aion"
+
   alfa_romeo:
     pure_bev: false
     keywords:
@@ -299,6 +305,7 @@ brands:
       - "NIO EL7"
       - "NIO EL8"
       - "NIO ET9"
+      - "NIO Firefly"
 
   nissan:
     pure_bev: false
@@ -354,6 +361,7 @@ brands:
       - "Renault Megane E-Tech"
       - "Renault Scenic E-Tech"
       - "Renault Zoe"
+      - "Renault Twingo E-Tech"
 
   rimac:
     pure_bev: true
@@ -398,6 +406,8 @@ brands:
     keywords:
       - "Toyota bZ4X"
       - "Toyota Urban Cruiser"
+      - "Toyota C-HR+"
+      - "Toyota C-HR Plus"
 
   volkswagen:
     pure_bev: false
@@ -435,6 +445,7 @@ brands:
       - "XPENG G6"
       - "XPENG G9"
       - "XPENG P7"
+      - "XPENG P7+"
       - "XPENG X9"
 
   zeekr:
@@ -444,4 +455,5 @@ brands:
       - "Zeekr 001"
       - "Zeekr X"
       - "Zeekr 7X"
+      - "Zeekr 7GT"
       - "Zeekr Mix"

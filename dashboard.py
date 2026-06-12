@@ -192,7 +192,7 @@ with tab_info:
 ### What does this dashboard show?
 
 Monthly Google search volumes for **over 200 BEV brand and model keywords**
-covering **56 brands** in **11 European markets** (DE, UK, FR, IT, ES, BE, CH,
+covering **57 brands** in **11 European markets** (DE, UK, FR, IT, ES, BE, CH,
 AT, SE, NL, PT). The data supports trend analysis, market comparisons, and
 competitive benchmarks from the perspective of **smart** as the focal brand.
 
@@ -222,7 +222,7 @@ competitive set.
 
 1. **Sidebar filters** (left) apply **globally** to all tabs:
    - Markets (default: all 11)
-   - Brands (default: all 56)
+   - Brands (default: all 57)
    - Date range
 2. **Tabs:**
    - **Brand Trend** — aggregated search volumes per brand, with market comparison + yearly table
@@ -244,7 +244,7 @@ competitive set.
             │ OAuth 2.0 + Developer Token
             ▼
    [fetcher.py]                             (Python ingestion)
-   - Reads keywords.yaml (200 kws, 56 brands)
+   - Reads keywords.yaml (208 kws, 57 brands)
    - Queries 11 markets sequentially
    - Normalises keywords, handles rate limits
             │
